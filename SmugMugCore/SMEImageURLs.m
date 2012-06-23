@@ -16,7 +16,7 @@
 }
 
 -(NSString *)albumURL {
-	return [[self sourceData] objectForKey:@"AlbumURL"];
+	return [[self sourceData] objectForKey:@"URL"];
 }
 
 -(NSString *)tinyURL {
