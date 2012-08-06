@@ -955,10 +955,8 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 		// refresh list of albums
 		[[self session] fetchAlbumsWithTarget:self callback:@selector(albumFetchComplete:)];
 	} else {
-		// album creation occurs in a sheet, don't try to show an error dialog in another sheet...
 		NSBeep();
-		
-		//[self presentError:NSLocalizedString(@"Album creation failed.", @"Error message to display when album creation fails.")];
+		[self presentError:[resp error]];
 	}
 }
 
