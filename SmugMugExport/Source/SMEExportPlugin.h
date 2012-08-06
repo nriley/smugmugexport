@@ -26,6 +26,7 @@
 	IBOutlet NSPanel *loginPanel;
 	IBOutlet NSPopUpButton *acccountPopupButton;
 	IBOutlet NSArrayController *albumsArrayController;
+	IBOutlet NSButtonCell *openGalleryInBrowserButtonCell;
 	IBOutlet NSPanel *newAlbumSheet;
 	IBOutlet NSPanel *preferencesPanel;
 	IBOutlet NSTableView *albumsTableView;
@@ -95,6 +96,7 @@
 -(IBAction)showNewAlbumSheet:(id)sender;
 -(IBAction)removeAlbum:(id)sender;
 -(IBAction)showEditAlbumSheet:(id)sender;
+-(IBAction)openGalleryInBrowser:(id)sender;
 
 #pragma mark Update
 -(IBAction)checkForUpdates:(id)sender;

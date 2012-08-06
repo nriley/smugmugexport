@@ -76,6 +76,10 @@
 	return [[[self albumData] objectForKey:@"id"] stringValue];
 }
 
+-(NSURL *)albumURL {
+	return [NSURL URLWithString:[[self albumData] objectForKey:@"URL"]];
+}
+
 -(NSString *)lastUpdated {
 	return [[self albumData] objectForKey:@"LastUpdated"];
 }

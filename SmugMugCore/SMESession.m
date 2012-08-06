@@ -271,7 +271,7 @@ static const NSTimeInterval AlbumRefreshDelay = 1.0;
 	[self invokeMethodAndTransform:[self baseRequestUrl]
 					   requestDict:[NSDictionary dictionaryWithObjectsAndKeys:
 									@"smugmug.albums.get", @"method",
-									@"LastUpdated", @"Extras",
+									@"LastUpdated,URL", @"Extras",
 									[self sessionID], @"SessionID", nil]
 						  callback:callback
 							target:target

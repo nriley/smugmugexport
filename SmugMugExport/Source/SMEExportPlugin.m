@@ -21,7 +21,9 @@
 #import "SMEGrowlDelegate.h"
 #import "SMESmugMugCore.h"
 
-
+@interface NSImage (Leopard)
+- (void)setTemplate:(BOOL)isTemplate;
+@end
 
 @interface WebView (WebKitStuffThatIsntPublic)
 -(void)setDrawsBackground:(BOOL)drawsBackground;
@@ -361,6 +363,27 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 	
 	[albumsTableView setTarget:self];
 	[albumsTableView setDoubleAction:@selector(showEditAlbumSheet:)];
+
+	NSImage *followLinkImage = [NSImage imageNamed:@"NSFollowLinkFreestandingTemplate"];
+	[openGalleryInBrowserButtonCell setImage:followLinkImage];
+
+	NSImage *highlightedLinkImage = [followLinkImage copy];
+	if ([highlightedLinkImage respondsToSelector:@selector(setTemplate:)])
+		[highlightedLinkImage setTemplate:NO];
+	NSRect imageRect = {NSZeroPoint, [highlightedLinkImage size]};
+	[highlightedLinkImage lockFocus];
+	[[[NSColor whiteColor] colorWithAlphaComponent:0.25] set];
+	NSRectFillUsingOperation(imageRect, NSCompositeSourceAtop);
+	[highlightedLinkImage unlockFocus];
+
+	[openGalleryInBrowserButtonCell setAlternateImage:highlightedLinkImage];
+	[highlightedLinkImage release];
+
+	[openGalleryInBrowserButtonCell setTarget:self];
+	[openGalleryInBrowserButtonCell setAction:@selector(openGalleryInBrowser:)];
+	[openGalleryInBrowserButtonCell setButtonType:NSMomentaryLightButton];
+	[openGalleryInBrowserButtonCell setHighlightsBy:NSContentsCellMask];
+
 	[self updateVaultLink];
 }
 
@@ -1008,6 +1031,11 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 	[[self session] fetchExtendedAlbumInfo:[[self selectedAlbum] ref]
 								withTarget:self 
 								  callback:@selector(albumInfoFetchDidComplete:)];
+}
+
+-(IBAction)openGalleryInBrowser:(id)sender {
+	SMEAlbum *clickedAlbum = [[albumsArrayController arrangedObjects] objectAtIndex:[albumsTableView selectedRow]];
+	[[NSWorkspace sharedWorkspace] openURL:[clickedAlbum albumURL]];
 }
 
 -(SMECategory *)categoryWithId:(unsigned int)categoryId {

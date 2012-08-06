@@ -25,6 +25,7 @@
 
 -(NSString *)albumKey;
 -(NSString *)albumId;
+-(NSURL *)albumURL;
 -(NSString *)lastUpdated;
 -(NSString *)title;
 -(void)setTitle:(NSString *)title;
