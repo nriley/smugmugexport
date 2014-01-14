@@ -18,7 +18,6 @@
 #import "SMEUserDefaultsAdditions.h"
 #import "SMEDataAdditions.h"
 
-#import "SMEGrowlDelegate.h"
 #import "SMESmugMugCore.h"
 
 @interface NSImage (Leopard)
@@ -103,15 +102,6 @@
 -(NSString *)loginSheetStatusMessage;
 -(void)setLoginSheetStatusMessage:(NSString *)m;
 
--(BOOL)siteUrlHasBeenFetched;
--(void)setSiteUrlHasBeenFetched:(BOOL)v;
-
--(NSURL *)uploadSiteUrl;
--(void)setUploadSiteUrl:(NSURL *)url;
-
--(SMEGrowlDelegate *)growlDelegate;
--(void)setGrowlDelegate:(SMEGrowlDelegate *)aDelegate;
-
 -(void)setSelectedAccount:(NSString *)account;
 -(NSString *)selectedAccount;
 -(SMEAlbum *)selectedAlbum;
@@ -123,9 +113,6 @@
 -(void)setIsUploading:(BOOL)v;
 
 -(void)beginAlbumDelete;
-
--(BOOL)browserOpenedInGallery;
--(void)setBrowserOpenedInGallery:(BOOL)v;	
 
 -(NSString *)imageUploadProgressText;
 -(void)setImageUploadProgressText:(NSString *)text;
@@ -170,15 +157,7 @@
 
 -(NSError *)smugmugError:(NSString *)error code:(int)code;
 
--(NSString *)GrowlFrameworkPath;
--(BOOL)isGrowlLoaded;
--(void)loadGrowl;
--(void)unloadGrowl;
 -(BOOL)isFrameworkLoaded:(NSString *)fwPath;
--(NSString *)JSONFrameworkPath;
--(BOOL)isJSONLoaded;
--(void)loadJSON;
--(void)unloadJSON;
 -(void)unloadFramework:(NSString *)fwPath;
 
 -(BOOL)pluginPaneIsVisible;
@@ -242,10 +221,7 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 		return nil; // fail!
 	
 	exportManager = exportMgr;
-	[self loadJSON];
 	[self setIsLoginSheetDismissed:NO];
-	[self setGrowlDelegate:[SMEGrowlDelegate growlDelegate]];
-	[self loadGrowl];
 
 	[NSBundle loadNibNamed: @"SmugMugExport" owner:self];
 	[self setAccountManager:[SMEAccountManager accountManager]];
@@ -253,7 +229,6 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 	[self setAlbumEditController:[SMEAlbumEditController controller]];
 	[albumEditController setDelegate:self];
 	[self setLoginAttempted:NO];
-	[self setSiteUrlHasBeenFetched:NO];
 	[self setImagesUploaded:0];
 	[self setIsUploading:NO];
 	[self resetAlbumUrlFetchAttemptCount];
@@ -269,15 +244,11 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 }
 
 -(void)dealloc {
-	[self unloadGrowl];
-	[self unloadJSON];
-	[[self growlDelegate] release];
 	[[self subcategories] release];
 	[[self categories] release];
 	[[self albums] release];
 	[[self albumEditController] release];
 	[[self postLogoutInvocation] release];
-	[[self uploadSiteUrl] release];
 	[[self session] release];
 	[[self username] release];
 	[[self password] release];
@@ -793,7 +764,6 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 	[[self accountManager] addAccount:[self username] withPassword:[self password]];
 	[self setSelectedAccount:[self username]];
 	[NSApp endSheet:loginPanel];
-	[[self growlDelegate] notifyLogin:[self selectedAccount]];
 }
 
 
@@ -838,7 +808,6 @@ NSString *SMEDefaultCaptionFormat = @"%caption";
 
 #pragma mark Logout 
 -(void)logoutDidComplete:(SMEResponse *)resp {
-	[[self growlDelegate] notifyLougout:[self selectedAccount]];
 	[self setAlbums:[NSArray array]];
 	[self setAccountInfo:nil];
 	[self setIsLoggedIn:NO];
@@ -1087,45 +1056,8 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 
 #pragma mark Image Url Fetching
 
--(void)imageUrlFetchDidCompleteForImageRef:(SMEResponse *)resp {
- 
-	SMEImageURLs *urls = [resp smData];
-	
-	if(![resp wasSuccessful] && [self albumUrlFetchAttemptCount] < AlbumUrlFetchRetryCount) {
-		[self incrementAlbumUrlFetchAttemptCount];
-	
-		// try again
-//		[[self session] performSelector:@selector(fetchImageUrls:) 
-//							  withObject:ref
-//							  afterDelay:2.0
-//								 inModes:[NSArray arrayWithObjects: NSDefaultRunLoopMode, NSModalPanelRunLoopMode, nil]];		
-		return;
-	}
-	
-	NSString *siteUrlString = [urls albumURL];
-	if(siteUrlString != nil) {
-		[self setUploadSiteUrl:[NSURL URLWithString:siteUrlString]];
-		[self setSiteUrlHasBeenFetched:YES];
-	} else {
-		[self setSiteUrlHasBeenFetched:NO];
-	}
-	
-	/* it's possible that we're done uploading the images for an album and *then* we
-		receive this callback notifying us of the url for the album.  In that case,
-	   we open the gallery in the browser. Otherwise, this happens when the upload
-		completes
-		*/
-	if(![self isUploading] && 
-	   [self uploadSiteUrl] != nil &&
-	   ![self browserOpenedInGallery] &&
-	   [[[NSUserDefaults smugMugUserDefaults] valueForKey:SMOpenInBrowserAfterUploadCompletion] boolValue]) {
-		[self openLastGalleryInBrowser];
-	}
-}
-
 -(void)openLastGalleryInBrowser {
-	[[NSWorkspace sharedWorkspace] openURL:[self uploadSiteUrl]];
-	[self setBrowserOpenedInGallery:YES];
+	[[NSWorkspace sharedWorkspace] openURL:[[self selectedAlbum] url]];
 }
 
 #pragma mark Category Get
@@ -1285,7 +1217,6 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 		return;
 	}
 	
-	[self setBrowserOpenedInGallery:NO];
 	[self setImagesUploaded:0];
 	[self setFileUploadProgress:[NSNumber numberWithInt:0]];
 	[self setSessionUploadProgress:[NSNumber numberWithInt:0]];
@@ -1309,8 +1240,6 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 	
 	[img setScalesWhenResized:YES];
 	[self setCurrentThumbnail:img];
-	[self setUploadSiteUrl:nil];
-	[self setSiteUrlHasBeenFetched:NO];
 	
 	SMEImage *imgToUpload = [self nextImage];
 	[[self session] uploadImage:imgToUpload
@@ -1369,20 +1298,15 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 	
 	// if this really bothers you you can set your preferences to not open the page in the browser
 	if(wasSuccessful &&
-		[[[NSUserDefaults smugMugUserDefaults] valueForKey:SMOpenInBrowserAfterUploadCompletion] boolValue] &&
-			[self uploadSiteUrl] != nil &&  ![self browserOpenedInGallery]) {
+		[[[NSUserDefaults smugMugUserDefaults] valueForKey:SMOpenInBrowserAfterUploadCompletion] boolValue])
 		[self openLastGalleryInBrowser];
-	}
-	
+
 	if(wasSuccessful && [[[NSUserDefaults smugMugUserDefaults] valueForKey:SMCloseExportWindowAfterUploadCompletion] boolValue])
 		[[self exportManager] cancelExportBeforeBeginning];
 	
-	if(wasSuccessful)
-		[[self growlDelegate] notifyUploadCompleted:[self imagesUploaded] uploadSiteUrl:[[self uploadSiteUrl] description]];
 }
 
 -(void)uploadDidFail:(SMEResponse *)resp {
-	[[self growlDelegate] notifyUploadError:[[resp error] localizedDescription]];
 	[self performUploadCompletionTasks:NO];
 //	NSString *errorString = NSLocalizedString(@"Image upload failed (%@).", @"Error message to display when upload fails.");
 	[self presentError:[resp error]];
@@ -1434,15 +1358,7 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 		[self presentError:[resp error]];
 		return;
 	}
-	
-	SMEImageRef *ref = [resp smData];
-	if(![self siteUrlHasBeenFetched]) {
-		[self resetAlbumUrlFetchAttemptCount];
-		[self setSiteUrlHasBeenFetched:NO];
-		[[self session] fetchImageURLs:ref withTarget:self callback:@selector(imageUrlFetchDidCompleteForImageRef:)];
-	}
 
-	[[self growlDelegate] notifyImageUploaded:theImage];
 	[self uploadNextImage];
 }
 
@@ -1545,39 +1461,6 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 	}
 }
 
--(BOOL)siteUrlHasBeenFetched {
-	return siteUrlHasBeenFetched;
-}
-
--(void)setSiteUrlHasBeenFetched:(BOOL)v {
-	siteUrlHasBeenFetched = v;
-}
-
--(NSURL *)uploadSiteUrl {
-	return uploadSiteUrl;
-}
-
--(void)setUploadSiteUrl:(NSURL *)url {
-	if(uploadSiteUrl != url) {
-		[uploadSiteUrl release];	
-		uploadSiteUrl = [url retain];
-	}
-}
-
--(SMEGrowlDelegate *)growlDelegate {
-	if(![self isGrowlLoaded])
-		return nil;
-	
-	return growlDelegate;
-}
-
--(void)setGrowlDelegate:(SMEGrowlDelegate *)aDelegate {
-	if(aDelegate != growlDelegate) {
-		[growlDelegate release];
-		growlDelegate = [aDelegate retain];
-	}
-}
-
 -(BOOL)isBusy {
 	return isBusy;
 }
@@ -1600,14 +1483,6 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 
 -(void)setLoginAttempted:(BOOL)v {
 	loginAttempted = v;
-}
-
--(BOOL)browserOpenedInGallery {
-	return browserOpenedInGallery;
-}
-
--(void)setBrowserOpenedInGallery:(BOOL)v {
-	browserOpenedInGallery = v;
 }
 
 -(BOOL)isUploading {
@@ -1948,49 +1823,11 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 	return NO;
 }
 
--(NSString *)JSONFrameworkPath {
-	return [[[NSBundle bundleForClass:[self class]] privateFrameworksPath] stringByAppendingPathComponent:@"JSON.framework"];
-}
-
 -(BOOL)isFrameworkLoaded:(NSString *)fwPath {
 	NSBundle *frameworkBundle = [NSBundle bundleWithPath:fwPath];
 	return frameworkBundle != nil && [frameworkBundle isLoaded];
 }
 
--(BOOL)isGrowlLoaded {
-	return [self isFrameworkLoaded:[self GrowlFrameworkPath]];
-}
-
--(BOOL)isJSONLoaded {
-	return [self isFrameworkLoaded:[self JSONFrameworkPath]];
-}
-
--(void)loadJSON {
-	if([self isJSONLoaded]) {
-		return;
-	}
-	
-	NSBundle *jsonBundle = [NSBundle bundleWithPath:[self JSONFrameworkPath]];
-	if(jsonBundle)
-		[jsonBundle load];
-}
-
--(NSString *)GrowlFrameworkPath {
-	return [[[NSBundle bundleForClass:[self class]] privateFrameworksPath] stringByAppendingPathComponent:@"Growl.framework"];
-}
-
--(void)loadGrowl {
-	if([self isGrowlLoaded])
-		return;
-		
-	NSBundle *growlBundle = [NSBundle bundleWithPath:[self GrowlFrameworkPath]];
-	if (growlBundle && [growlBundle load]) {
-		// Register ourselves as a Growl delegate
-		[GrowlApplicationBridge setGrowlDelegate:[self growlDelegate]];
-	} else {
-		NSLog(@"Could not load Growl.framework");
-	}
-}
 
 -(void)unloadFramework:(NSString *)fwPath {
 //	if(![self isFrameworkLoaded:fwPath])
@@ -2002,9 +1839,5 @@ decisionListener:(id<WebPolicyDecisionListener>)listener {
 //		[bundle unload];
 }
 
-
--(void)unloadJSON {
-	[self unloadFramework:[self JSONFrameworkPath]];
-}
 
 @end
