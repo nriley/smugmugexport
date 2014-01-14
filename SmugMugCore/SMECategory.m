@@ -38,7 +38,7 @@
 	return [self sourceData];
 }
 
--(unsigned int)hash {
+-(NSUInteger)hash {
 	return 31 * [[[self sourceData] objectForKey:@"id"] hash];
 }
 

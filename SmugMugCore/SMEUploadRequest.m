@@ -178,7 +178,7 @@ static void ReadStreamClientCallBack(CFReadStreamRef stream, CFStreamEventType t
 	CFHTTPMessageRef myRequest = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("POST"), (CFURLRef)requestUrl, kCFHTTPVersion1_1);
 	
 	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("User-Agent"), (CFStringRef)[SMESession UserAgent]);
-	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("Content-Length"), (CFStringRef)[NSString stringWithFormat:@"%d", [[[self image] imageData] length]]);
+	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("Content-Length"), (CFStringRef)[NSString stringWithFormat:@"%lu", (unsigned long)[[[self image] imageData] length]]);
 	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("Content-MD5"), (CFStringRef)[[[self image] imageData] md5HexString]);
 	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("X-Smug-SessionID"), (CFStringRef)[[self session] sessionID]);
 	CFHTTPMessageSetHeaderFieldValue(myRequest, CFSTR("X-Smug-Version"), (CFStringRef)[self uploadApiVersion]);
@@ -305,23 +305,23 @@ static void ReadStreamClientCallBack(CFReadStreamRef stream, CFStreamEventType t
 -(NSString *)errorDescriptionForError:(CFStreamError *)err {
 	
 	if(err->domain == kCFStreamErrorDomainPOSIX) {
-		return [NSString stringWithFormat:@"%d : %s", err->error, strerror(err->error)];
+		return [NSString stringWithFormat:@"%d : %s", (int)err->error, strerror(err->error)];
 	} else if (err->domain == kCFStreamErrorDomainMacOSStatus) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"Mac Error", @"Mac Error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"Mac Error", @"Mac Error"), (int)err->error ];
 	} else if (err->domain == kCFStreamErrorDomainNetDB) {
-		return [NSString stringWithFormat:@"%d: %s", err->error, hstrerror(err->error)];
+		return [NSString stringWithFormat:@"%d: %s", (int)err->error, hstrerror(err->error)];
 	} else if (err->domain == kCFStreamErrorDomainMach) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"Mach Error", @"Mach Error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"Mach Error", @"Mach Error"), (int)err->error ];
 	} else if (err->domain == kCFStreamErrorDomainHTTP) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"HTTP Error", @"HTTP Error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"HTTP Error", @"HTTP Error"), (int)err->error ];
 	}  else if (err->domain == kCFStreamErrorDomainSOCKS) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"SOCKS Error", @"SOCKS Error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"SOCKS Error", @"SOCKS Error"), (int)err->error ];
 	} else if (err->domain == kCFStreamErrorDomainSystemConfiguration) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"System Configuration error", @"System Configuration error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"System Configuration error", @"System Configuration error"), (int)err->error ];
 	} else if (err->domain == kCFStreamErrorDomainSSL) {
-		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"SSL error", @"SSL error"), err->error ];
+		return [NSString stringWithFormat:@"%@ %d", NSLocalizedString(@"SSL error", @"SSL error"), (int)err->error ];
 	} else {
-		return [NSString stringWithFormat:@"%d", err->error];
+		return [NSString stringWithFormat:@"%d", (int)err->error];
 	}
 	
 }
